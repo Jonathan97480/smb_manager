@@ -1,0 +1,7 @@
+{
+    "name": "SMB Share Manager",
+    "render_readme": true,
+    "domains": [
+        "smb_manager"
+    ]
+}

@@ -1,0 +1,13 @@
+{
+    "domain": "smb_manager",
+    "name": "SMB Share Manager",
+    "documentation": "https://github.com/Jonathan97480/smb_manager",
+    "issue_tracker": "https://github.com/Jonathan97480/smb_manager/issues",
+    "codeowners": [
+        "@Jonathan97480"
+    ],
+    "requirements": [],
+    "version": "1.0.0",
+    "iot_class": "local_push",
+    "config_flow": false
+}

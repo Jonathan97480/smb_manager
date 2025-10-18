@@ -1,0 +1,251 @@
+detect_disks:
+  name: Detect Disks
+  description: Detect all available disks connected to the system
+  fields: {}
+
+mount_disk:
+  name: Mount Disk
+  description: Mount a disk to a mount point
+  fields:
+    device:
+      name: Device
+      description: Device path (e.g., /dev/sda1)
+      required: true
+      example: "/dev/sda1"
+      selector:
+        text:
+    mount_point:
+      name: Mount Point
+      description: Where to mount the disk (optional, auto-generated if not provided)
+      required: false
+      example: "/mnt/my_disk"
+      selector:
+        text:
+    filesystem:
+      name: Filesystem
+      description: Filesystem type (optional, auto-detected if not provided)
+      required: false
+      example: "ntfs"
+      selector:
+        select:
+          options:
+            - "ntfs"
+            - "exfat"
+            - "ext4"
+            - "vfat"
+    permanent:
+      name: Permanent
+      description: Add to /etc/fstab for automatic mounting on boot
+      required: false
+      default: false
+      selector:
+        boolean:
+
+unmount_disk:
+  name: Unmount Disk
+  description: Unmount a disk from its mount point
+  fields:
+    mount_point:
+      name: Mount Point
+      description: Mount point to unmount
+      required: true
+      example: "/mnt/my_disk"
+      selector:
+        text:
+    remove_from_fstab:
+      name: Remove from fstab
+      description: Also remove from /etc/fstab
+      required: false
+      default: false
+      selector:
+        boolean:
+
+create_share:
+  name: Create SMB Share
+  description: Create a new SMB share
+  fields:
+    share_name:
+      name: Share Name
+      description: Name of the SMB share
+      required: true
+      example: "my_share"
+      selector:
+        text:
+    path:
+      name: Path
+      description: Local path to share
+      required: true
+      example: "/mnt/my_disk"
+      selector:
+        text:
+    browseable:
+      name: Browseable
+      description: Make share visible in network browser
+      required: false
+      default: true
+      selector:
+        boolean:
+    writable:
+      name: Writable
+      description: Allow write access
+      required: false
+      default: true
+      selector:
+        boolean:
+    guest_ok:
+      name: Guest Access
+      description: Allow guest access without password
+      required: false
+      default: false
+      selector:
+        boolean:
+    create_mask:
+      name: Create Mask
+      description: Default permissions for new files
+      required: false
+      default: "0644"
+      example: "0644"
+      selector:
+        text:
+    directory_mask:
+      name: Directory Mask
+      description: Default permissions for new directories
+      required: false
+      default: "0755"
+      example: "0755"
+      selector:
+        text:
+    force_user:
+      name: Force User
+      description: Force all operations as this user
+      required: false
+      default: "root"
+      example: "root"
+      selector:
+        text:
+    force_group:
+      name: Force Group
+      description: Force all operations as this group
+      required: false
+      default: "root"
+      example: "root"
+      selector:
+        text:
+
+delete_share:
+  name: Delete SMB Share
+  description: Delete an existing SMB share
+  fields:
+    share_name:
+      name: Share Name
+      description: Name of the share to delete
+      required: true
+      example: "my_share"
+      selector:
+        text:
+
+update_share:
+  name: Update SMB Share
+  description: Update an existing SMB share configuration
+  fields:
+    share_name:
+      name: Share Name
+      description: Name of the share to update
+      required: true
+      example: "my_share"
+      selector:
+        text:
+    path:
+      name: Path
+      description: Local path to share
+      required: false
+      example: "/mnt/my_disk"
+      selector:
+        text:
+    browseable:
+      name: Browseable
+      description: Make share visible in network browser
+      required: false
+      selector:
+        boolean:
+    writable:
+      name: Writable
+      description: Allow write access
+      required: false
+      selector:
+        boolean:
+    guest_ok:
+      name: Guest Access
+      description: Allow guest access without password
+      required: false
+      selector:
+        boolean:
+    create_mask:
+      name: Create Mask
+      description: Default permissions for new files
+      required: false
+      example: "0644"
+      selector:
+        text:
+    directory_mask:
+      name: Directory Mask
+      description: Default permissions for new directories
+      required: false
+      example: "0755"
+      selector:
+        text:
+    force_user:
+      name: Force User
+      description: Force all operations as this user
+      required: false
+      example: "root"
+      selector:
+        text:
+    force_group:
+      name: Force Group
+      description: Force all operations as this group
+      required: false
+      example: "root"
+      selector:
+        text:
+
+add_user:
+  name: Add Samba User
+  description: Add a new Samba user
+  fields:
+    username:
+      name: Username
+      description: Username for Samba access
+      required: true
+      example: "beroute"
+      selector:
+        text:
+    password:
+      name: Password
+      description: Password for the user
+      required: true
+      example: "MyPassword123"
+      selector:
+        text:
+
+remove_user:
+  name: Remove Samba User
+  description: Remove an existing Samba user
+  fields:
+    username:
+      name: Username
+      description: Username to remove
+      required: true
+      example: "beroute"
+      selector:
+        text:
+
+restart_samba:
+  name: Restart Samba
+  description: Restart Samba services (smbd and nmbd)
+  fields: {}
+
+install_dependencies:
+  name: Install Dependencies
+  description: Install required dependencies (samba, ntfs-3g, exfat-fuse, etc.)
+  fields: {}
