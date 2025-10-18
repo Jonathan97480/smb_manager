@@ -616,10 +616,31 @@ Voulez-vous continuer avec le nettoyage et la création?"""
                 blocking=True,
             )
             
-            return self.async_create_entry(
-                title="",
-                data={},
-                description="Partitions créées avec succès. Vous pouvez maintenant monter les nouvelles partitions."
+            # Build partition list for success message
+            disk_name = disk_device.split('/')[-1]
+            partition_list = "\n".join([
+                f"  └─ {disk_name}{i+1} - {p['fstype']} [{p['name']}]"
+                for i, p in enumerate(partition_configs)
+            ])
+            
+            success_message = f"""✅ Partitions créées avec succès!
+
+Disque: {disk_device}
+Partitions créées:
+{partition_list}
+
+📋 PROCHAINES ÉTAPES:
+1. Retournez au menu principal
+2. Sélectionnez "Monter un disque"
+3. Vous verrez les nouvelles partitions avec └─ 
+4. Sélectionnez chaque partition à monter individuellement
+
+⚠️ Les partitions sont créées et formatées mais PAS encore montées.
+Vous devez les monter pour pouvoir les utiliser."""
+            
+            return self.async_abort(
+                reason="partitions_created_success",
+                description_placeholders={"info": success_message}
             )
         
         # Show summary

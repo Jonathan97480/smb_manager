@@ -12,7 +12,8 @@
             "no_unmounted_disks": "No unmounted disks detected",
             "no_mounted_disks": "No mounted disks detected",
             "no_shares": "No SMB shares configured",
-            "cleanup_failed": "Cleanup failed: {error}"
+            "cleanup_failed": "Cleanup failed: {error}",
+            "partitions_created_success": "{info}"
         }
     },
     "options": {

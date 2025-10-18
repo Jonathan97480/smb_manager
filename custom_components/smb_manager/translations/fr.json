@@ -12,7 +12,8 @@
             "no_unmounted_disks": "Aucun disque non monté détecté",
             "no_mounted_disks": "Aucun disque monté détecté",
             "no_shares": "Aucun partage SMB configuré",
-            "cleanup_failed": "Échec du nettoyage: {error}"
+            "cleanup_failed": "Échec du nettoyage: {error}",
+            "partitions_created_success": "{info}"
         }
     },
     "options": {
