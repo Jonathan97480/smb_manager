@@ -114,9 +114,23 @@ class SmbManagerOptionsFlow(config_entries.OptionsFlow):
                 if device.startswith("NOPART:"):
                     # Extract actual device path
                     actual_device = device.replace("NOPART:", "")
-                    # Redirect to partition creation step
-                    self.context["disk_to_partition"] = actual_device
-                    return await self.async_step_create_partition()
+                    
+                    # Get disk info to check if it has existing partitions
+                    disks = await self.hass.async_add_executor_job(disk_manager.detect_disks)
+                    disk_name = actual_device.split('/')[-1]
+                    
+                    # Check for existing partitions
+                    existing_partitions = [d for d in disks if d.get("parent") == disk_name]
+                    
+                    if existing_partitions:
+                        # Disk has partitions - show warning
+                        self.context["disk_to_partition"] = actual_device
+                        self.context["existing_partitions"] = existing_partitions
+                        return await self.async_step_partition_warning()
+                    else:
+                        # No partitions - go directly to creation
+                        self.context["disk_to_partition"] = actual_device
+                        return await self.async_step_create_partition()
                 
                 # Normal mounting
                 await self.hass.services.async_call(
@@ -322,6 +336,64 @@ class SmbManagerOptionsFlow(config_entries.OptionsFlow):
             ),
             description_placeholders={
                 "info": f"Sélectionnez un disque à démonter parmi les {len(mounted_disks)} disque(s) monté(s)."
+            },
+        )
+
+    async def async_step_partition_warning(
+        self, user_input: dict[str, Any] | None = None
+    ) -> FlowResult:
+        """Warn user about existing partitions before creating new ones."""
+        disk_device = self.context.get("disk_to_partition")
+        existing_partitions = self.context.get("existing_partitions", [])
+        
+        if user_input is not None:
+            action = user_input.get("action")
+            
+            if action == "create_new":
+                # User confirmed - proceed to partition creation
+                return await self.async_step_create_partition()
+            else:
+                # User cancelled - go back to mount selection
+                return await self.async_step_mount_disk()
+        
+        # Build partition list for display
+        partition_list = "\n".join([
+            f"  • {p['name']} ({p.get('size', '?')}) - {p.get('fstype', 'non formaté')}"
+            for p in existing_partitions
+        ])
+        
+        disk_name = disk_device.split('/')[-1]
+        
+        warning_message = f"""⚠️ ATTENTION - PARTITIONS EXISTANTES DÉTECTÉES ⚠️
+
+Le disque {disk_name} contient {len(existing_partitions)} partition(s) existante(s):
+{partition_list}
+
+🔴 SI VOUS CONTINUEZ:
+   • Toutes ces partitions seront SUPPRIMÉES
+   • Toutes les données seront PERDUES
+   • De nouvelles partitions seront créées
+
+✅ SI VOUS VOULEZ MONTER CES PARTITIONS:
+   • Cliquez sur "Annuler" ci-dessous
+   • Retournez à la liste "Monter un disque"
+   • Sélectionnez les partitions individuellement (avec └─)
+   • Montez-les une par une SANS perdre de données
+
+Que souhaitez-vous faire?"""
+        
+        return self.async_show_form(
+            step_id="partition_warning",
+            data_schema=vol.Schema(
+                {
+                    vol.Required("action"): vol.In({
+                        "create_new": "🔴 CONTINUER - Supprimer et créer nouvelles partitions",
+                        "cancel": "✅ ANNULER - Retour à la liste pour monter les partitions existantes"
+                    }),
+                }
+            ),
+            description_placeholders={
+                "info": warning_message
             },
         )
 

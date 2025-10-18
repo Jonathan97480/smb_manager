@@ -108,6 +108,13 @@
                 "description": "Cliquez sur Soumettre pour redémarrer les services Samba (smbd et nmbd).",
                 "data": {}
             },
+            "partition_warning": {
+                "title": "⚠️ Avertissement - Partitions existantes",
+                "description": "Le disque sélectionné contient des partitions existantes. Créer de nouvelles partitions supprimera toutes les données!",
+                "data": {
+                    "action": "Action à effectuer"
+                }
+            },
             "create_partition": {
                 "title": "Créer des partitions",
                 "description": "Le disque sélectionné n'a pas de partition valide. Combien de partitions souhaitez-vous créer ?",
