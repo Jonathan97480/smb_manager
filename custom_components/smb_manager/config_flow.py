@@ -212,11 +212,9 @@ class SmbManagerOptionsFlow(config_entries.OptionsFlow):
             
             # If it's a partition (has parent)
             if disk.get("parent"):
-                # Check if parent disk usage is < 90%
-                parent_usage = disk_usage.get(disk["parent"], 100)
-                
-                # Only add if it has valid filesystem AND parent is < 90% used
-                if disk.get("fstype") and parent_usage < 90:
+                # Add partition if it has valid filesystem
+                # (regardless of parent usage - if partition is valid, allow mounting)
+                if disk.get("fstype"):
                     mountable_items.append(disk)
             else:
                 # It's a parent disk
