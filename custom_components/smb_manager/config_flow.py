@@ -134,6 +134,26 @@ class SmbManagerOptionsFlow(config_entries.OptionsFlow):
         # Get list of all disks
         disks = await self.hass.async_add_executor_job(disk_manager.detect_disks)
         
+        # Helper function to parse size to bytes
+        def parse_size_to_bytes(size_str):
+            """Convert size string like '953.9G' to bytes."""
+            if not size_str or size_str == "Unknown":
+                return 0
+            size_str = size_str.strip().upper()
+            try:
+                if 'T' in size_str:
+                    return float(size_str.rstrip('TB')) * 1024 * 1024 * 1024 * 1024
+                elif 'G' in size_str:
+                    return float(size_str.rstrip('GB')) * 1024 * 1024 * 1024
+                elif 'M' in size_str:
+                    return float(size_str.rstrip('MB')) * 1024 * 1024
+                elif 'K' in size_str:
+                    return float(size_str.rstrip('KB')) * 1024
+                else:
+                    return float(size_str)
+            except:
+                return 0
+        
         # Separate partitions and parent disks
         mountable_items = []
         disks_without_partitions = []
@@ -143,21 +163,34 @@ class SmbManagerOptionsFlow(config_entries.OptionsFlow):
             if disk.get("mounted"):
                 continue
             
-            # If it's a partition (has parent), add it
+            # If it's a partition (has parent), add it if it has valid filesystem
             if disk.get("parent"):
-                # Only add partitions with valid filesystem
                 if disk.get("fstype"):
                     mountable_items.append(disk)
             else:
-                # It's a parent disk, check if it has mountable partitions
-                has_mountable_children = False
-                for child in disks:
-                    if child.get("parent") == disk["name"] and not child.get("mounted") and child.get("fstype"):
-                        has_mountable_children = True
-                        break
+                # It's a parent disk - calculate usage percentage
+                disk_size_bytes = parse_size_to_bytes(disk.get("size", "0"))
                 
-                # If no mountable partitions, mark disk as needing partitioning
-                if not has_mountable_children:
+                if disk_size_bytes == 0:
+                    # Can't calculate, skip this disk
+                    continue
+                
+                # Calculate total size of mounted/used partitions
+                used_bytes = 0
+                has_any_partition = False
+                
+                for child in disks:
+                    if child.get("parent") == disk["name"]:
+                        has_any_partition = True
+                        # Count ALL partitions (mounted, with fstype, or just existing)
+                        child_size = parse_size_to_bytes(child.get("size", "0"))
+                        used_bytes += child_size
+                
+                # Calculate usage percentage
+                usage_percent = (used_bytes / disk_size_bytes * 100) if disk_size_bytes > 0 else 0
+                
+                # Show parent disk only if less than 90% is used OR no partitions exist
+                if not has_any_partition or usage_percent < 90:
                     disks_without_partitions.append(disk)
         
         if not mountable_items and not disks_without_partitions:
