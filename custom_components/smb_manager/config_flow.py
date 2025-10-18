@@ -170,6 +170,7 @@ class SmbManagerOptionsFlow(config_entries.OptionsFlow):
         
         # First pass: Calculate usage percentage for all parent disks
         disk_usage = {}  # {disk_name: usage_percent}
+        disk_has_valid_partitions = {}  # {disk_name: has_at_least_one_valid_partition}
         
         for disk in disks:
             if not disk.get("parent"):  # It's a parent disk
@@ -177,21 +178,28 @@ class SmbManagerOptionsFlow(config_entries.OptionsFlow):
                 
                 if disk_size_bytes == 0:
                     disk_usage[disk["name"]] = 100  # Unknown size = treat as full
+                    disk_has_valid_partitions[disk["name"]] = False
                     continue
                 
                 # Calculate total size of ALL partitions
                 used_bytes = 0
                 has_any_partition = False
+                has_valid_partition = False
                 
                 for child in disks:
                     if child.get("parent") == disk["name"]:
                         has_any_partition = True
                         child_size = parse_size_to_bytes(child.get("size", "0"))
                         used_bytes += child_size
+                        
+                        # Check if at least one partition has a valid filesystem
+                        if child.get("fstype"):
+                            has_valid_partition = True
                 
                 # Calculate usage percentage
                 usage_percent = (used_bytes / disk_size_bytes * 100) if disk_size_bytes > 0 else 0
                 disk_usage[disk["name"]] = usage_percent if has_any_partition else 0
+                disk_has_valid_partitions[disk["name"]] = has_valid_partition
         
         # Second pass: Separate partitions and parent disks
         mountable_items = []
@@ -211,10 +219,14 @@ class SmbManagerOptionsFlow(config_entries.OptionsFlow):
                 if disk.get("fstype") and parent_usage < 90:
                     mountable_items.append(disk)
             else:
-                # It's a parent disk - show only if < 90% used
+                # It's a parent disk
                 usage_percent = disk_usage.get(disk["name"], 100)
+                has_valid_partitions = disk_has_valid_partitions.get(disk["name"], False)
                 
-                if usage_percent < 90:
+                # Show parent disk if:
+                # 1. < 90% used OR
+                # 2. >= 90% used BUT has NO valid partitions (need reformatting)
+                if usage_percent < 90 or not has_valid_partitions:
                     disks_without_partitions.append(disk)
         
         if not mountable_items and not disks_without_partitions:
