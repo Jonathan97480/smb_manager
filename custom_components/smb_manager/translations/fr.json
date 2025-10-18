@@ -8,7 +8,10 @@
             }
         },
         "abort": {
-            "already_configured": "SMB Share Manager est déjà configuré"
+            "already_configured": "SMB Share Manager est déjà configuré",
+            "no_unmounted_disks": "Aucun disque non monté détecté",
+            "no_mounted_disks": "Aucun disque monté détecté",
+            "no_shares": "Aucun partage SMB configuré"
         }
     },
     "options": {
@@ -32,18 +35,18 @@
             },
             "mount_disk": {
                 "title": "Monter un disque",
-                "description": "Montez un disque en spécifiant le périphérique et le point de montage.",
+                "description": "Sélectionnez un disque à monter parmi les disques non montés détectés.",
                 "data": {
-                    "device": "Périphérique (ex: /dev/sda1)",
-                    "mount_point": "Point de montage (ex: /mnt/usb)",
+                    "device": "Disque à monter",
+                    "mount_point": "Point de montage (optionnel)",
                     "fs_type": "Type de système de fichiers"
                 }
             },
             "unmount_disk": {
                 "title": "Démonter un disque",
-                "description": "Démontez un disque en spécifiant le point de montage.",
+                "description": "Sélectionnez un disque à démonter parmi les disques montés.",
                 "data": {
-                    "mount_point": "Point de montage (ex: /mnt/usb)"
+                    "mount_point": "Disque à démonter"
                 }
             },
             "manage_shares": {
@@ -67,9 +70,9 @@
             },
             "delete_share": {
                 "title": "Supprimer un partage SMB",
-                "description": "Supprimez un partage SMB existant en spécifiant son nom.",
+                "description": "Sélectionnez un partage à supprimer parmi les partages configurés.",
                 "data": {
-                    "share_name": "Nom du partage"
+                    "share_name": "Partage à supprimer"
                 }
             },
             "list_shares": {

@@ -8,7 +8,10 @@
             }
         },
         "abort": {
-            "already_configured": "SMB Share Manager is already configured"
+            "already_configured": "SMB Share Manager is already configured",
+            "no_unmounted_disks": "No unmounted disks detected",
+            "no_mounted_disks": "No mounted disks detected",
+            "no_shares": "No SMB shares configured"
         }
     },
     "options": {
@@ -32,18 +35,18 @@
             },
             "mount_disk": {
                 "title": "Mount a disk",
-                "description": "Mount a disk by specifying the device and mount point.",
+                "description": "Select a disk to mount from the detected unmounted disks.",
                 "data": {
-                    "device": "Device (e.g., /dev/sda1)",
-                    "mount_point": "Mount point (e.g., /mnt/usb)",
+                    "device": "Disk to mount",
+                    "mount_point": "Mount point (optional)",
                     "fs_type": "Filesystem type"
                 }
             },
             "unmount_disk": {
                 "title": "Unmount a disk",
-                "description": "Unmount a disk by specifying the mount point.",
+                "description": "Select a disk to unmount from the mounted disks.",
                 "data": {
-                    "mount_point": "Mount point (e.g., /mnt/usb)"
+                    "mount_point": "Disk to unmount"
                 }
             },
             "manage_shares": {
@@ -67,9 +70,9 @@
             },
             "delete_share": {
                 "title": "Delete SMB share",
-                "description": "Delete an existing SMB share by specifying its name.",
+                "description": "Select a share to delete from the configured shares.",
                 "data": {
-                    "share_name": "Share name"
+                    "share_name": "Share to delete"
                 }
             },
             "list_shares": {

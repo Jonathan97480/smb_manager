@@ -103,32 +103,57 @@ class SmbManagerOptionsFlow(config_entries.OptionsFlow):
         self, user_input: dict[str, Any] | None = None
     ) -> FlowResult:
         """Mount a disk."""
+        # Import disk manager
+        from .disk_manager import DiskManager
+        disk_manager = DiskManager(self.hass)
+        
         if user_input is not None:
-            await self.hass.services.async_call(
-                DOMAIN,
-                "mount_disk",
-                {
-                    "device": user_input["device"],
-                    "mount_point": user_input["mount_point"],
-                    "fs_type": user_input.get("fs_type", "auto"),
-                },
-                blocking=True,
+            # If device was selected, proceed with mounting
+            device = user_input.get("device")
+            if device:
+                await self.hass.services.async_call(
+                    DOMAIN,
+                    "mount_disk",
+                    {
+                        "device": device,
+                        "mount_point": user_input.get("mount_point", f"/mnt/{device.split('/')[-1]}"),
+                        "fs_type": user_input.get("fs_type", "auto"),
+                    },
+                    blocking=True,
+                )
+                return self.async_create_entry(title="", data={})
+        
+        # Get list of unmounted disks
+        disks = await self.hass.async_add_executor_job(disk_manager.detect_disks)
+        unmounted_disks = [d for d in disks if not d.get("mounted")]
+        
+        if not unmounted_disks:
+            return self.async_abort(
+                reason="no_unmounted_disks",
+                description_placeholders={"info": "Aucun disque non monté détecté. Tous les disques sont déjà montés."}
             )
-            return self.async_create_entry(title="", data={})
-
+        
+        # Create options dict with disk info
+        disk_options = {}
+        for disk in unmounted_disks:
+            label = f"{disk['name']} ({disk.get('size', 'Taille inconnue')}) - {disk.get('fstype', 'Type inconnu')}"
+            if disk.get('label'):
+                label += f" [{disk['label']}]"
+            disk_options[disk['device']] = label
+        
         return self.async_show_form(
             step_id="mount_disk",
             data_schema=vol.Schema(
                 {
-                    vol.Required("device"): cv.string,
-                    vol.Required("mount_point"): cv.string,
+                    vol.Required("device"): vol.In(disk_options),
+                    vol.Optional("mount_point"): cv.string,
                     vol.Optional("fs_type", default="auto"): vol.In(
                         ["auto", "ntfs-3g", "ext4", "vfat", "exfat"]
                     ),
                 }
             ),
             description_placeholders={
-                "info": "Montez un disque en spécifiant le périphérique (ex: /dev/sda1) et le point de montage (ex: /mnt/usb)."
+                "info": f"Sélectionnez un disque à monter parmi les {len(unmounted_disks)} disque(s) non monté(s). Le point de montage sera créé automatiquement si vous le laissez vide."
             },
         )
 
@@ -136,6 +161,10 @@ class SmbManagerOptionsFlow(config_entries.OptionsFlow):
         self, user_input: dict[str, Any] | None = None
     ) -> FlowResult:
         """Unmount a disk."""
+        # Import disk manager
+        from .disk_manager import DiskManager
+        disk_manager = DiskManager(self.hass)
+        
         if user_input is not None:
             await self.hass.services.async_call(
                 DOMAIN,
@@ -144,16 +173,34 @@ class SmbManagerOptionsFlow(config_entries.OptionsFlow):
                 blocking=True,
             )
             return self.async_create_entry(title="", data={})
+        
+        # Get list of mounted disks
+        disks = await self.hass.async_add_executor_job(disk_manager.detect_disks)
+        mounted_disks = [d for d in disks if d.get("mounted") and d.get("mountpoint")]
+        
+        if not mounted_disks:
+            return self.async_abort(
+                reason="no_mounted_disks",
+                description_placeholders={"info": "Aucun disque monté détecté. Rien à démonter."}
+            )
+        
+        # Create options dict with mounted disk info
+        mount_options = {}
+        for disk in mounted_disks:
+            label = f"{disk['name']} ({disk.get('size', 'Taille inconnue')}) - {disk['mountpoint']}"
+            if disk.get('label'):
+                label += f" [{disk['label']}]"
+            mount_options[disk['mountpoint']] = label
 
         return self.async_show_form(
             step_id="unmount_disk",
             data_schema=vol.Schema(
                 {
-                    vol.Required("mount_point"): cv.string,
+                    vol.Required("mount_point"): vol.In(mount_options),
                 }
             ),
             description_placeholders={
-                "info": "Démontez un disque en spécifiant le point de montage (ex: /mnt/usb)."
+                "info": f"Sélectionnez un disque à démonter parmi les {len(mounted_disks)} disque(s) monté(s)."
             },
         )
 
@@ -207,6 +254,10 @@ class SmbManagerOptionsFlow(config_entries.OptionsFlow):
         self, user_input: dict[str, Any] | None = None
     ) -> FlowResult:
         """Delete an SMB share."""
+        # Import SMB manager
+        from .smb_manager import SmbManager
+        smb_manager = SmbManager(self.hass)
+        
         if user_input is not None:
             await self.hass.services.async_call(
                 DOMAIN,
@@ -215,16 +266,31 @@ class SmbManagerOptionsFlow(config_entries.OptionsFlow):
                 blocking=True,
             )
             return self.async_create_entry(title="", data={})
+        
+        # Get list of existing shares
+        shares = await self.hass.async_add_executor_job(smb_manager.list_shares)
+        
+        if not shares:
+            return self.async_abort(
+                reason="no_shares",
+                description_placeholders={"info": "Aucun partage SMB configuré. Rien à supprimer."}
+            )
+        
+        # Create options dict with share info
+        share_options = {}
+        for share in shares:
+            label = f"{share['name']} ({share.get('path', 'Chemin inconnu')})"
+            share_options[share['name']] = label
 
         return self.async_show_form(
             step_id="delete_share",
             data_schema=vol.Schema(
                 {
-                    vol.Required("share_name"): cv.string,
+                    vol.Required("share_name"): vol.In(share_options),
                 }
             ),
             description_placeholders={
-                "info": "Supprimez un partage SMB existant en spécifiant son nom."
+                "info": f"Sélectionnez un partage à supprimer parmi les {len(shares)} partage(s) configuré(s)."
             },
         )
 
