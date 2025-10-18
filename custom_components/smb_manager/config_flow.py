@@ -209,20 +209,58 @@ class SmbManagerOptionsFlow(config_entries.OptionsFlow):
                 description_placeholders={"info": "Aucun disque non monté détecté. Tous les disques sont déjà montés."}
             )
         
-        # Create options dict
+        # Create options dict with hierarchical display
+        # Group partitions by parent disk
+        disk_groups = {}  # {parent_name: {'disk': disk_obj, 'partitions': [partition_objs]}}
+        
+        # First, organize parent disks
+        for disk in disks_without_partitions:
+            disk_groups[disk["name"]] = {
+                'disk': disk,
+                'partitions': []
+            }
+        
+        # Then, add partitions to their parent groups
+        for partition in mountable_items:
+            parent_name = partition.get("parent")
+            if parent_name:
+                if parent_name not in disk_groups:
+                    # Create parent entry if doesn't exist
+                    parent_disk = next((d for d in disks if d["name"] == parent_name and not d.get("parent")), None)
+                    if parent_disk:
+                        disk_groups[parent_name] = {
+                            'disk': parent_disk,
+                            'partitions': []
+                        }
+                    else:
+                        # Parent not found, create placeholder
+                        disk_groups[parent_name] = {
+                            'disk': None,
+                            'partitions': []
+                        }
+                disk_groups[parent_name]['partitions'].append(partition)
+        
+        # Build ordered options dict with visual hierarchy
         disk_options = {}
         
-        # Add mountable partitions
-        for disk in mountable_items:
-            label = f"{disk['name']} ({disk.get('size', '?')}) - {disk.get('fstype', 'inconnu')}"
-            if disk.get('label'):
-                label += f" [{disk['label']}]"
-            disk_options[disk['device']] = label
-        
-        # Add disks without partitions (marked for partitioning)
-        for disk in disks_without_partitions:
-            label = f"⚠️ {disk['name']} ({disk.get('size', '?')}) - SANS PARTITION VALIDE"
-            disk_options[f"NOPART:{disk['device']}"] = label
+        for parent_name in sorted(disk_groups.keys()):
+            group = disk_groups[parent_name]
+            parent_disk = group['disk']
+            partitions = group['partitions']
+            
+            # Add parent disk first (if it should be shown for partitioning)
+            if parent_disk and parent_name in [d["name"] for d in disks_without_partitions]:
+                usage = disk_usage.get(parent_name, 0)
+                label = f"💾 {parent_disk['name']} ({parent_disk.get('size', '?')}) - {usage:.0f}% utilisé - CRÉER PARTITIONS"
+                disk_options[f"NOPART:{parent_disk['device']}"] = label
+            
+            # Add partitions (indented with └─)
+            for partition in sorted(partitions, key=lambda x: x['name']):
+                indent = "  └─ "
+                label = f"{indent}{partition['name']} ({partition.get('size', '?')}) - {partition.get('fstype', 'inconnu')}"
+                if partition.get('label'):
+                    label += f" [{partition['label']}]"
+                disk_options[partition['device']] = label
         
         return self.async_show_form(
             step_id="mount_disk",
