@@ -1,0 +1,110 @@
+{
+    "config": {
+        "step": {
+            "user": {
+                "title": "Configure SMB Share Manager",
+                "description": "This integration allows you to manage SMB shares, disks and Samba users.",
+                "data": {}
+            }
+        },
+        "abort": {
+            "already_configured": "SMB Share Manager is already configured"
+        }
+    },
+    "options": {
+        "step": {
+            "menu": {
+                "title": "SMB Share Manager",
+                "description": "Choose an action to perform",
+                "menu_options": {
+                    "detect_disks": "Detect disks",
+                    "mount_disk": "Mount a disk",
+                    "unmount_disk": "Unmount a disk",
+                    "manage_shares": "Manage SMB shares",
+                    "manage_users": "Manage Samba users",
+                    "restart_samba": "Restart Samba"
+                }
+            },
+            "detect_disks": {
+                "title": "Detect disks",
+                "description": "Click Submit to detect all connected disks. Results will be available in Home Assistant events (smb_manager_disks_detected).",
+                "data": {}
+            },
+            "mount_disk": {
+                "title": "Mount a disk",
+                "description": "Mount a disk by specifying the device and mount point.",
+                "data": {
+                    "device": "Device (e.g., /dev/sda1)",
+                    "mount_point": "Mount point (e.g., /mnt/usb)",
+                    "fs_type": "Filesystem type"
+                }
+            },
+            "unmount_disk": {
+                "title": "Unmount a disk",
+                "description": "Unmount a disk by specifying the mount point.",
+                "data": {
+                    "mount_point": "Mount point (e.g., /mnt/usb)"
+                }
+            },
+            "manage_shares": {
+                "title": "Manage SMB shares",
+                "description": "Choose an action",
+                "menu_options": {
+                    "create_share": "Create a share",
+                    "delete_share": "Delete a share",
+                    "list_shares": "List shares"
+                }
+            },
+            "create_share": {
+                "title": "Create SMB share",
+                "description": "Create a new SMB share by specifying the name, path and options.",
+                "data": {
+                    "share_name": "Share name",
+                    "path": "Directory path",
+                    "comment": "Comment (optional)",
+                    "read_only": "Read only"
+                }
+            },
+            "delete_share": {
+                "title": "Delete SMB share",
+                "description": "Delete an existing SMB share by specifying its name.",
+                "data": {
+                    "share_name": "Share name"
+                }
+            },
+            "list_shares": {
+                "title": "List SMB shares",
+                "description": "Click Submit to list all configured SMB shares. Results will be available in Home Assistant events (smb_manager_shares_listed).",
+                "data": {}
+            },
+            "manage_users": {
+                "title": "Manage Samba users",
+                "description": "Choose an action",
+                "menu_options": {
+                    "add_user": "Add a user",
+                    "delete_user": "Delete a user"
+                }
+            },
+            "add_user": {
+                "title": "Add Samba user",
+                "description": "Add a new Samba user with a username and password.",
+                "data": {
+                    "username": "Username",
+                    "password": "Password"
+                }
+            },
+            "delete_user": {
+                "title": "Delete Samba user",
+                "description": "Delete an existing Samba user by specifying their username.",
+                "data": {
+                    "username": "Username"
+                }
+            },
+            "restart_samba": {
+                "title": "Restart Samba",
+                "description": "Click Submit to restart Samba services (smbd and nmbd).",
+                "data": {}
+            }
+        }
+    }
+}

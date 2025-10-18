@@ -1,8 +1,28 @@
 import logging
+from homeassistant.config_entries import ConfigEntry
+from homeassistant.core import HomeAssistant
+from homeassistant.const import Platform
 
 _LOGGER = logging.getLogger(__name__)
 
 DOMAIN = "smb_manager"
+PLATFORMS = [Platform.SENSOR]
+
+
+async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
+    """Set up SMB Share Manager from a config entry."""
+    # Setup the sensor platform
+    await hass.config_entries.async_forward_entry_setups(entry, PLATFORMS)
+    
+    # Setup services
+    return await async_setup(hass, {})
+
+
+async def async_unload_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
+    """Unload a config entry."""
+    unload_ok = await hass.config_entries.async_unload_platforms(entry, PLATFORMS)
+    return unload_ok
+
 
 async def async_setup(hass, config):
     """Set up the SMB Share Manager component."""

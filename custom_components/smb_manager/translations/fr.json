@@ -1,0 +1,110 @@
+{
+    "config": {
+        "step": {
+            "user": {
+                "title": "Configurer SMB Share Manager",
+                "description": "Cette intégration permet de gérer les partages SMB, les disques et les utilisateurs Samba.",
+                "data": {}
+            }
+        },
+        "abort": {
+            "already_configured": "SMB Share Manager est déjà configuré"
+        }
+    },
+    "options": {
+        "step": {
+            "menu": {
+                "title": "SMB Share Manager",
+                "description": "Choisissez une action à effectuer",
+                "menu_options": {
+                    "detect_disks": "Détecter les disques",
+                    "mount_disk": "Monter un disque",
+                    "unmount_disk": "Démonter un disque",
+                    "manage_shares": "Gérer les partages SMB",
+                    "manage_users": "Gérer les utilisateurs Samba",
+                    "restart_samba": "Redémarrer Samba"
+                }
+            },
+            "detect_disks": {
+                "title": "Détecter les disques",
+                "description": "Cliquez sur Soumettre pour détecter tous les disques connectés. Les résultats seront disponibles dans les événements Home Assistant (smb_manager_disks_detected).",
+                "data": {}
+            },
+            "mount_disk": {
+                "title": "Monter un disque",
+                "description": "Montez un disque en spécifiant le périphérique et le point de montage.",
+                "data": {
+                    "device": "Périphérique (ex: /dev/sda1)",
+                    "mount_point": "Point de montage (ex: /mnt/usb)",
+                    "fs_type": "Type de système de fichiers"
+                }
+            },
+            "unmount_disk": {
+                "title": "Démonter un disque",
+                "description": "Démontez un disque en spécifiant le point de montage.",
+                "data": {
+                    "mount_point": "Point de montage (ex: /mnt/usb)"
+                }
+            },
+            "manage_shares": {
+                "title": "Gérer les partages SMB",
+                "description": "Choisissez une action",
+                "menu_options": {
+                    "create_share": "Créer un partage",
+                    "delete_share": "Supprimer un partage",
+                    "list_shares": "Lister les partages"
+                }
+            },
+            "create_share": {
+                "title": "Créer un partage SMB",
+                "description": "Créez un nouveau partage SMB en spécifiant le nom, le chemin et les options.",
+                "data": {
+                    "share_name": "Nom du partage",
+                    "path": "Chemin du répertoire",
+                    "comment": "Commentaire (optionnel)",
+                    "read_only": "Lecture seule"
+                }
+            },
+            "delete_share": {
+                "title": "Supprimer un partage SMB",
+                "description": "Supprimez un partage SMB existant en spécifiant son nom.",
+                "data": {
+                    "share_name": "Nom du partage"
+                }
+            },
+            "list_shares": {
+                "title": "Lister les partages SMB",
+                "description": "Cliquez sur Soumettre pour lister tous les partages SMB configurés. Les résultats seront disponibles dans les événements Home Assistant (smb_manager_shares_listed).",
+                "data": {}
+            },
+            "manage_users": {
+                "title": "Gérer les utilisateurs Samba",
+                "description": "Choisissez une action",
+                "menu_options": {
+                    "add_user": "Ajouter un utilisateur",
+                    "delete_user": "Supprimer un utilisateur"
+                }
+            },
+            "add_user": {
+                "title": "Ajouter un utilisateur Samba",
+                "description": "Ajoutez un nouvel utilisateur Samba avec un nom d'utilisateur et un mot de passe.",
+                "data": {
+                    "username": "Nom d'utilisateur",
+                    "password": "Mot de passe"
+                }
+            },
+            "delete_user": {
+                "title": "Supprimer un utilisateur Samba",
+                "description": "Supprimez un utilisateur Samba existant en spécifiant son nom d'utilisateur.",
+                "data": {
+                    "username": "Nom d'utilisateur"
+                }
+            },
+            "restart_samba": {
+                "title": "Redémarrer Samba",
+                "description": "Cliquez sur Soumettre pour redémarrer les services Samba (smbd et nmbd).",
+                "data": {}
+            }
+        }
+    }
+}

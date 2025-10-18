@@ -5,16 +5,44 @@
 
 Un plugin Home Assistant pour gérer facilement les partages SMB/CIFS sur Raspberry Pi. Détectez, montez et configurez vos disques USB/SSD et créez des partages SMB directement depuis l'interface Home Assistant !
 
+## 📸 Aperçu
+
+Le plugin affiche en temps réel :
+- 💾 **Tous vos disques** avec nom, capacité, et espace utilisé
+- 🔒 **État de montage** : monté/non monté, permanent/temporaire
+- 🌐 **Partages SMB actifs** avec chemins réseau Windows (`\\IP\Partage`)
+- 📊 **Statistiques globales** : disques montés, permanents, partagés
+- ⚙️ **Interface de configuration** pour gérer disques et partages en un clic
+
 ## ✨ Fonctionnalités
 
-- 🔍 **Détection automatique** des disques USB/SSD branchés
-- 💾 **Montage/démontage** des disques avec support multi-filesystem (NTFS, exFAT, EXT4, FAT32)
+### 🎯 Interface Graphique Intégrée
+- � **3 Capteurs en temps réel** affichant l'état complet du système
+- 💾 **Vue détaillée des disques** : nom, capacité, espace, montage, permanent, partagé
+- 🌐 **Chemins réseau automatiques** pour accès Windows (`\\IP\Partage`)
+- 🎨 **Cartes personnalisables** pour visualiser vos disques et partages
+- ⚙️ **Menu de configuration** intégré pour toutes les actions
+
+### 💾 Gestion des Disques
+- �🔍 **Détection automatique** des disques USB/SSD branchés
+- � **Montage/démontage** avec support multi-filesystem (NTFS, exFAT, EXT4, FAT32)
 - 📌 **Configuration fstab** pour le montage permanent au démarrage
-- 🌐 **Gestion complète des partages SMB** (création, modification, suppression)
-- 👤 **Gestion des utilisateurs Samba** (ajout, suppression, mot de passe)
-- 🔧 **Installation automatique** des dépendances nécessaires
-- 🎯 **Interface graphique** intégrée à Home Assistant
-- 🔄 **Services** utilisables dans les automations
+- 🔒 **Indication visuelle** : permanent/temporaire
+
+### 🌐 Gestion des Partages SMB
+- ➕ **Création, modification, suppression** de partages
+- 📋 **Liste complète** de tous les partages avec chemins réseau
+- � **Association automatique** disques ↔ partages
+- 🌍 **Accès réseau Windows** prêt à l'emploi
+
+### 👤 Gestion des Utilisateurs
+- ➕ **Ajout/suppression** d'utilisateurs Samba
+- 🔐 **Gestion des mots de passe** sécurisée
+
+### 🔧 Maintenance
+- 🔄 **Redémarrage Samba** en un clic
+- � **Installation automatique** des dépendances nécessaires
+- 🎯 **Services** utilisables dans les automations
 
 ## 📦 Installation
 
@@ -36,13 +64,146 @@ Un plugin Home Assistant pour gérer facilement les partages SMB/CIFS sur Raspbe
 
 ## ⚙️ Configuration
 
-Ajoutez simplement cette ligne dans votre `configuration.yaml` :
+### Configuration Initiale
+
+1. Allez dans **Paramètres** → **Appareils et Services**
+2. Cliquez sur **+ AJOUTER UNE INTÉGRATION**
+3. Recherchez **"SMB Share Manager"**
+4. Cliquez dessus et suivez les instructions
+5. L'intégration est maintenant configurée !
+
+> **Note** : Pour les versions antérieures, vous pouvez aussi ajouter `smb_manager:` dans `configuration.yaml`
+
+### Interface Graphique
+
+Le plugin ajoute automatiquement **3 capteurs** dans Home Assistant :
+
+- 🖥️ **SMB Server Status** : État du serveur avec IP
+- 💾 **Disks and Mounts** : Liste de tous les disques détectés
+- 📂 **SMB Shares** : Liste de tous les partages configurés
+
+#### Voir les Options de Configuration
+
+1. Allez dans **Paramètres** → **Appareils et Services**
+2. Trouvez la carte **SMB Share Manager**
+3. Cliquez sur **CONFIGURER**
+4. Vous accéderez à un menu avec toutes les actions :
+   - Détecter les disques
+   - Monter/Démonter un disque
+   - Gérer les partages SMB
+   - Gérer les utilisateurs Samba
+   - Redémarrer Samba
+
+## 📊 Affichage des Disques et Partages
+
+### Vue Simple : Voir les Détails
+
+Pour voir les informations détaillées de vos disques :
+
+1. Dans votre tableau de bord, cliquez sur **"Disks and Mounts"**
+2. Une fenêtre s'ouvre - faites défiler vers le bas
+3. Cliquez sur **"Attributs ▼"**
+4. Vous verrez toutes les informations :
+   - Liste complète des disques
+   - Nom, taille, type de système de fichiers
+   - Si monté, point de montage
+   - Si permanent (dans fstab)
+   - Si partagé via SMB avec chemins réseau
+
+### Vue Avancée : Carte Markdown Personnalisée
+
+Pour une visualisation complète et formatée :
+
+1. Cliquez sur l'**icône crayon** ✏️ en haut à droite de votre tableau de bord
+2. Cliquez sur **"+ AJOUTER UNE CARTE"** en bas
+3. Sélectionnez **"Markdown"**
+4. Collez ce code :
 
 ```yaml
-smb_manager:
+type: markdown
+title: 💾 Disques et Partages SMB
+content: |
+  ## 🖥️ Serveur: {{ state_attr('sensor.smb_shares', 'server_ip') }}
+  
+  {% set disks = state_attr('sensor.disks_and_mounts', 'disks') %}
+  {% if disks %}
+  
+  ### 📊 Résumé
+  - **Total**: {{ state_attr('sensor.disks_and_mounts', 'total_disks') }} disques
+  - **Montés**: {{ state_attr('sensor.disks_and_mounts', 'mounted_disks') }}
+  - **Permanents**: {{ state_attr('sensor.disks_and_mounts', 'permanent_mounts') }}
+  - **Partagés**: {{ state_attr('sensor.disks_and_mounts', 'shared_disks') }}
+  
+  ---
+  
+  {% for disk in disks %}
+  ### {% if disk.mounted %}✅{% else %}❌{% endif %} {{ disk.name }} - **{{ disk.size }}**
+  
+  - **Périphérique**: `{{ disk.device }}`
+  - **Type**: {{ disk.filesystem if disk.filesystem else 'Inconnu' }}
+  - **Label**: {{ disk.label if disk.label else 'Sans nom' }}
+  {% if disk.mounted %}
+  - **Monté sur**: `{{ disk.mount_point }}`
+  - {% if disk.permanent %}🔒 Permanent (fstab){% else %}⚠️ Temporaire{% endif %}
+  {% else %}
+  - ⚠️ **Non monté**
+  {% endif %}
+  
+  {% if disk.shared_via_smb %}
+  **🌐 Partages SMB**:
+  {% for share in disk.shares %}
+  - 📂 {{ share.name }}: `{{ share.network_path }}`
+  {% endfor %}
+  {% endif %}
+  
+  ---
+  {% endfor %}
+  
+  {% else %}
+  ⚠️ Aucun disque détecté - Attendez 60 secondes pour la mise à jour
+  {% endif %}
+  
+  ## 📂 Tous les Partages SMB ({{ states('sensor.smb_shares') }})
+  
+  {% set shares = state_attr('sensor.smb_shares', 'shares') %}
+  {% if shares %}
+  {% for share in shares %}
+  - 📁 **{{ share.name }}**
+    - Local: `{{ share.path }}`
+    - Réseau: `{{ share.network_path }}`
+    - {% if share.writable %}✍️ Lecture/Écriture{% else %}👁️ Lecture seule{% endif %}
+  {% endfor %}
+  {% else %}
+  ℹ️ Aucun partage configuré
+  {% endif %}
 ```
 
-Redémarrez Home Assistant pour charger le plugin.
+5. Cliquez sur **ENREGISTRER**
+6. Cliquez sur **ENREGISTRER** en haut pour sauvegarder le tableau de bord
+
+#### Ce que vous verrez :
+
+La carte affichera pour chaque disque :
+- ✅/❌ État de montage
+- 💾 **Nom et capacité** du disque
+- 📁 **Point de montage** (si monté)
+- 🔒 Si **permanent** (auto-monté au démarrage)
+- 🌐 Si **partagé en SMB** avec le chemin réseau complet (ex: `\\192.168.1.22\films`)
+- 📊 **Statistiques globales** (total, montés, permanents, partagés)
+
+### Alternative : Carte Entités Simple
+
+Pour une vue plus compacte :
+
+```yaml
+type: entities
+title: 💾 Disques et Partages
+entities:
+  - entity: sensor.disks_and_mounts
+  - entity: sensor.smb_shares
+  - entity: sensor.smb_server_status
+state_color: true
+```
 
 ## 🚀 Utilisation
 
@@ -191,14 +352,25 @@ Le plugin nécessite les paquets suivants (installés automatiquement via le ser
 
 ## 📝 Changelog
 
+### v1.1.0 (2025-10-18)
+
+- ✨ **Nouvelle interface graphique complète**
+- 📊 **3 capteurs en temps réel** (Disks and Mounts, SMB Shares, SMB Server Status)
+- 💾 **Affichage détaillé des disques** avec capacité, espace, montage, permanent, partagé
+- 🌐 **Chemins réseau automatiques** pour Windows (`\\IP\Partage`)
+- ⚙️ **Menu de configuration** intégré dans l'interface
+- 🎨 **Cartes Markdown personnalisables** pour visualisation avancée
+- 🔗 **Association automatique** disques ↔ partages SMB
+- 🔒 **Indication visuelle** du statut (monté, permanent, partagé)
+
 ### v1.0.0 (2025-10-18)
 
-- Version initiale
-- Détection des disques
-- Montage/démontage avec gestion fstab
-- Gestion complète des partages SMB
-- Gestion des utilisateurs Samba
-- Installation des dépendances
+- 🎉 Version initiale
+- 🔍 Détection des disques
+- 💾 Montage/démontage avec gestion fstab
+- 🌐 Gestion complète des partages SMB
+- 👤 Gestion des utilisateurs Samba
+- 📦 Installation des dépendances
 
 ## 🤝 Contribution
 
