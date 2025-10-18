@@ -11,7 +11,8 @@
             "already_configured": "SMB Share Manager est déjà configuré",
             "no_unmounted_disks": "Aucun disque non monté détecté",
             "no_mounted_disks": "Aucun disque monté détecté",
-            "no_shares": "Aucun partage SMB configuré"
+            "no_shares": "Aucun partage SMB configuré",
+            "cleanup_failed": "Échec du nettoyage: {error}"
         }
     },
     "options": {
@@ -113,6 +114,13 @@
                 "description": "Le disque sélectionné contient des partitions existantes. Créer de nouvelles partitions supprimera toutes les données!",
                 "data": {
                     "action": "Action à effectuer"
+                }
+            },
+            "cleanup_before_partition": {
+                "title": "🔧 Nettoyage requis",
+                "description": "Des partitions sont montées ou partagées. Elles doivent être démontées et les partages supprimés avant de créer de nouvelles partitions.",
+                "data": {
+                    "confirm_cleanup": "Je confirme le nettoyage et la suppression des données"
                 }
             },
             "create_partition": {

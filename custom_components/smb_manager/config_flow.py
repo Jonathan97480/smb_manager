@@ -350,15 +350,45 @@ class SmbManagerOptionsFlow(config_entries.OptionsFlow):
             action = user_input.get("action")
             
             if action == "create_new":
-                # User confirmed - proceed to partition creation
-                return await self.async_step_create_partition()
+                # Before proceeding, check if any partitions are mounted or shared
+                from .smb_manager import SmbManager
+                smb_manager = SmbManager(self.hass)
+                
+                mounted_partitions = []
+                shared_partitions = []
+                
+                # Check each partition
+                for partition in existing_partitions:
+                    # Check if mounted
+                    if partition.get("mounted"):
+                        mounted_partitions.append(partition)
+                    
+                    # Check if shared via SMB
+                    if partition.get("mountpoint"):
+                        shares = await self.hass.async_add_executor_job(smb_manager.list_shares)
+                        for share in shares:
+                            if share.get("path", "").startswith(partition["mountpoint"]):
+                                shared_partitions.append({
+                                    "partition": partition,
+                                    "share": share
+                                })
+                
+                # If there are mounted or shared partitions, show cleanup step
+                if mounted_partitions or shared_partitions:
+                    self.context["mounted_partitions"] = mounted_partitions
+                    self.context["shared_partitions"] = shared_partitions
+                    return await self.async_step_cleanup_before_partition()
+                else:
+                    # No mounted/shared partitions - proceed to creation
+                    return await self.async_step_create_partition()
             else:
                 # User cancelled - go back to mount selection
                 return await self.async_step_mount_disk()
         
         # Build partition list for display
         partition_list = "\n".join([
-            f"  • {p['name']} ({p.get('size', '?')}) - {p.get('fstype', 'non formaté')}"
+            f"  • {p['name']} ({p.get('size', '?')}) - {p.get('fstype', 'non formaté')}" + 
+            (f" [MONTÉ: {p['mountpoint']}]" if p.get('mounted') else "")
             for p in existing_partitions
         ])
         
@@ -394,6 +424,101 @@ Que souhaitez-vous faire?"""
             ),
             description_placeholders={
                 "info": warning_message
+            },
+        )
+
+    async def async_step_cleanup_before_partition(
+        self, user_input: dict[str, Any] | None = None
+    ) -> FlowResult:
+        """Clean up mounted partitions and shares before creating new partitions."""
+        mounted_partitions = self.context.get("mounted_partitions", [])
+        shared_partitions = self.context.get("shared_partitions", [])
+        
+        if user_input is not None:
+            if user_input.get("confirm_cleanup"):
+                # User confirmed - perform cleanup
+                from .disk_manager import DiskManager
+                from .smb_manager import SmbManager
+                
+                disk_manager = DiskManager(self.hass)
+                smb_manager = SmbManager(self.hass)
+                
+                cleanup_errors = []
+                
+                # First, delete all SMB shares
+                for shared_info in shared_partitions:
+                    share_name = shared_info["share"].get("name")
+                    try:
+                        await self.hass.async_add_executor_job(
+                            smb_manager.delete_share, share_name
+                        )
+                    except Exception as e:
+                        cleanup_errors.append(f"Erreur suppression partage '{share_name}': {str(e)}")
+                
+                # Then, unmount all partitions
+                for partition in mounted_partitions:
+                    mount_point = partition.get("mountpoint")
+                    try:
+                        await self.hass.async_add_executor_job(
+                            disk_manager.unmount_disk, mount_point
+                        )
+                    except Exception as e:
+                        cleanup_errors.append(f"Erreur démontage '{mount_point}': {str(e)}")
+                
+                if cleanup_errors:
+                    # Show errors
+                    error_msg = "\n".join(cleanup_errors)
+                    return self.async_abort(
+                        reason="cleanup_failed",
+                        description_placeholders={"error": error_msg}
+                    )
+                
+                # Cleanup successful - proceed to partition creation
+                return await self.async_step_create_partition()
+            else:
+                # User cancelled - go back
+                return await self.async_step_mount_disk()
+        
+        # Build list of actions to perform
+        actions_list = []
+        
+        if shared_partitions:
+            actions_list.append(f"\n📤 PARTAGES SMB À SUPPRIMER ({len(shared_partitions)}):")
+            for shared_info in shared_partitions:
+                share = shared_info["share"]
+                partition = shared_info["partition"]
+                actions_list.append(f"   • Partage '{share.get('name')}' → {partition['name']}")
+        
+        if mounted_partitions:
+            actions_list.append(f"\n💾 PARTITIONS À DÉMONTER ({len(mounted_partitions)}):")
+            for partition in mounted_partitions:
+                actions_list.append(f"   • {partition['name']} monté sur {partition['mountpoint']}")
+        
+        actions_text = "\n".join(actions_list)
+        
+        cleanup_message = f"""🔧 NETTOYAGE REQUIS AVANT CRÉATION DE PARTITIONS
+
+Pour créer de nouvelles partitions, nous devons d'abord:
+{actions_text}
+
+⚠️ CETTE OPÉRATION VA:
+1. Arrêter tous les partages SMB sur ce disque
+2. Démonter toutes les partitions montées
+3. Puis créer les nouvelles partitions (perte de données)
+
+✅ Les fichiers actuellement sur ces partitions seront PERDUS!
+
+Voulez-vous continuer avec le nettoyage et la création?"""
+        
+        return self.async_show_form(
+            step_id="cleanup_before_partition",
+            data_schema=vol.Schema(
+                {
+                    vol.Required("confirm_cleanup", default=False): bool,
+                }
+            ),
+            description_placeholders={
+                "info": cleanup_message
             },
         )
 

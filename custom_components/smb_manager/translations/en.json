@@ -11,7 +11,8 @@
             "already_configured": "SMB Share Manager is already configured",
             "no_unmounted_disks": "No unmounted disks detected",
             "no_mounted_disks": "No mounted disks detected",
-            "no_shares": "No SMB shares configured"
+            "no_shares": "No SMB shares configured",
+            "cleanup_failed": "Cleanup failed: {error}"
         }
     },
     "options": {
@@ -113,6 +114,13 @@
                 "description": "The selected disk contains existing partitions. Creating new partitions will delete all data!",
                 "data": {
                     "action": "Action to perform"
+                }
+            },
+            "cleanup_before_partition": {
+                "title": "🔧 Cleanup required",
+                "description": "Partitions are mounted or shared. They must be unmounted and shares removed before creating new partitions.",
+                "data": {
+                    "confirm_cleanup": "I confirm cleanup and data deletion"
                 }
             },
             "create_partition": {
