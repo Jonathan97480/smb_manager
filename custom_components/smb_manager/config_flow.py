@@ -108,9 +108,17 @@ class SmbManagerOptionsFlow(config_entries.OptionsFlow):
         disk_manager = DiskManager(self.hass)
         
         if user_input is not None:
-            # If device was selected, proceed with mounting
             device = user_input.get("device")
             if device:
+                # Check if device needs partitioning
+                if device.startswith("NOPART:"):
+                    # Extract actual device path
+                    actual_device = device.replace("NOPART:", "")
+                    # Redirect to partition creation step
+                    self.context["disk_to_partition"] = actual_device
+                    return await self.async_step_create_partition()
+                
+                # Normal mounting
                 await self.hass.services.async_call(
                     DOMAIN,
                     "mount_disk",
@@ -123,23 +131,55 @@ class SmbManagerOptionsFlow(config_entries.OptionsFlow):
                 )
                 return self.async_create_entry(title="", data={})
         
-        # Get list of unmounted disks
+        # Get list of all disks
         disks = await self.hass.async_add_executor_job(disk_manager.detect_disks)
-        unmounted_disks = [d for d in disks if not d.get("mounted")]
         
-        if not unmounted_disks:
+        # Separate partitions and parent disks
+        mountable_items = []
+        disks_without_partitions = []
+        
+        for disk in disks:
+            # Skip mounted items
+            if disk.get("mounted"):
+                continue
+            
+            # If it's a partition (has parent), add it
+            if disk.get("parent"):
+                # Only add partitions with valid filesystem
+                if disk.get("fstype"):
+                    mountable_items.append(disk)
+            else:
+                # It's a parent disk, check if it has mountable partitions
+                has_mountable_children = False
+                for child in disks:
+                    if child.get("parent") == disk["name"] and not child.get("mounted") and child.get("fstype"):
+                        has_mountable_children = True
+                        break
+                
+                # If no mountable partitions, mark disk as needing partitioning
+                if not has_mountable_children:
+                    disks_without_partitions.append(disk)
+        
+        if not mountable_items and not disks_without_partitions:
             return self.async_abort(
                 reason="no_unmounted_disks",
                 description_placeholders={"info": "Aucun disque non monté détecté. Tous les disques sont déjà montés."}
             )
         
-        # Create options dict with disk info
+        # Create options dict
         disk_options = {}
-        for disk in unmounted_disks:
-            label = f"{disk['name']} ({disk.get('size', 'Taille inconnue')}) - {disk.get('fstype', 'Type inconnu')}"
+        
+        # Add mountable partitions
+        for disk in mountable_items:
+            label = f"{disk['name']} ({disk.get('size', '?')}) - {disk.get('fstype', 'inconnu')}"
             if disk.get('label'):
                 label += f" [{disk['label']}]"
             disk_options[disk['device']] = label
+        
+        # Add disks without partitions (marked for partitioning)
+        for disk in disks_without_partitions:
+            label = f"⚠️ {disk['name']} ({disk.get('size', '?')}) - SANS PARTITION VALIDE"
+            disk_options[f"NOPART:{disk['device']}"] = label
         
         return self.async_show_form(
             step_id="mount_disk",
@@ -153,7 +193,7 @@ class SmbManagerOptionsFlow(config_entries.OptionsFlow):
                 }
             ),
             description_placeholders={
-                "info": f"Sélectionnez un disque à monter parmi les {len(unmounted_disks)} disque(s) non monté(s). Le point de montage sera créé automatiquement si vous le laissez vide."
+                "info": f"{len(mountable_items)} partition(s) disponible(s) pour montage. {len(disks_without_partitions)} disque(s) sans partition valide (nécessite création de partition)."
             },
         )
 
@@ -201,6 +241,122 @@ class SmbManagerOptionsFlow(config_entries.OptionsFlow):
             ),
             description_placeholders={
                 "info": f"Sélectionnez un disque à démonter parmi les {len(mounted_disks)} disque(s) monté(s)."
+            },
+        )
+
+    async def async_step_create_partition(
+        self, user_input: dict[str, Any] | None = None
+    ) -> FlowResult:
+        """Create partitions on a disk."""
+        disk_device = self.context.get("disk_to_partition")
+        
+        if user_input is not None:
+            num_partitions = user_input.get("num_partitions", 1)
+            
+            # Store number of partitions and go to partition details
+            self.context["num_partitions"] = num_partitions
+            self.context["partition_configs"] = []
+            self.context["current_partition"] = 1
+            
+            return await self.async_step_partition_details()
+        
+        return self.async_show_form(
+            step_id="create_partition",
+            data_schema=vol.Schema(
+                {
+                    vol.Required("num_partitions", default=1): vol.All(
+                        vol.Coerce(int), vol.Range(min=1, max=4)
+                    ),
+                }
+            ),
+            description_placeholders={
+                "info": f"Le disque {disk_device} n'a pas de partition valide. Combien de partitions souhaitez-vous créer ? (1-4)"
+            },
+        )
+
+    async def async_step_partition_details(
+        self, user_input: dict[str, Any] | None = None
+    ) -> FlowResult:
+        """Configure partition details."""
+        current = self.context["current_partition"]
+        total = self.context["num_partitions"]
+        
+        if user_input is not None:
+            # Store partition config
+            self.context["partition_configs"].append({
+                "name": user_input.get("name", f"partition{current}"),
+                "size": user_input.get("size", "100%"),
+                "fstype": user_input.get("fstype", "ext4"),
+            })
+            
+            # Check if we need more partitions
+            if current < total:
+                self.context["current_partition"] = current + 1
+                return await self.async_step_partition_details()
+            else:
+                # All partitions configured, create them
+                return await self.async_step_confirm_partition_creation()
+        
+        # Calculate default size
+        if current == total:
+            default_size = "100%"  # Last partition takes remaining space
+        else:
+            default_size = f"{100 // total}%"
+        
+        return self.async_show_form(
+            step_id="partition_details",
+            data_schema=vol.Schema(
+                {
+                    vol.Optional("name", default=f"partition{current}"): cv.string,
+                    vol.Optional("size", default=default_size): cv.string,
+                    vol.Required("fstype", default="ext4"): vol.In(
+                        ["ext4", "ntfs", "vfat", "exfat"]
+                    ),
+                }
+            ),
+            description_placeholders={
+                "info": f"Configuration de la partition {current}/{total}. Taille peut être en GB (ex: 50G) ou en % (ex: 50% ou 100% pour tout l'espace restant)."
+            },
+        )
+
+    async def async_step_confirm_partition_creation(
+        self, user_input: dict[str, Any] | None = None
+    ) -> FlowResult:
+        """Confirm partition creation."""
+        if user_input is not None:
+            disk_device = self.context.get("disk_to_partition")
+            partition_configs = self.context.get("partition_configs", [])
+            
+            # Create partitions via service
+            await self.hass.services.async_call(
+                DOMAIN,
+                "create_partitions",
+                {
+                    "device": disk_device,
+                    "partitions": partition_configs,
+                },
+                blocking=True,
+            )
+            
+            return self.async_create_entry(
+                title="",
+                data={},
+                description="Partitions créées avec succès. Vous pouvez maintenant monter les nouvelles partitions."
+            )
+        
+        # Show summary
+        partition_configs = self.context.get("partition_configs", [])
+        disk_device = self.context.get("disk_to_partition")
+        
+        summary = f"Disque: {disk_device}\n\nPartitions à créer:\n"
+        for i, config in enumerate(partition_configs, 1):
+            summary += f"\n{i}. {config['name']} - {config['size']} - {config['fstype']}"
+        
+        return self.async_show_form(
+            step_id="confirm_partition_creation",
+            data_schema=vol.Schema({}),
+            description_placeholders={
+                "info": f"{summary}\n\n⚠️ ATTENTION: Cette opération effacera toutes les données du disque! Confirmez pour continuer."
             },
         )
 

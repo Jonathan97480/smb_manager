@@ -249,3 +249,22 @@ install_dependencies:
   name: Install Dependencies
   description: Install required dependencies (samba, ntfs-3g, exfat-fuse, etc.)
   fields: {}
+
+create_partitions:
+  name: Create Partitions
+  description: Create partitions on a disk (WARNING: Erases all data on the disk!)
+  fields:
+    device:
+      name: Device
+      description: Device path (e.g., /dev/sda)
+      required: true
+      example: "/dev/sda"
+      selector:
+        text:
+    partitions:
+      name: Partitions
+      description: List of partition configurations (name, size, fstype)
+      required: true
+      example: '[{"name": "data", "size": "100%", "fstype": "ext4"}]'
+      selector:
+        text:

@@ -107,6 +107,27 @@
                 "title": "Redémarrer Samba",
                 "description": "Cliquez sur Soumettre pour redémarrer les services Samba (smbd et nmbd).",
                 "data": {}
+            },
+            "create_partition": {
+                "title": "Créer des partitions",
+                "description": "Le disque sélectionné n'a pas de partition valide. Combien de partitions souhaitez-vous créer ?",
+                "data": {
+                    "num_partitions": "Nombre de partitions (1-4)"
+                }
+            },
+            "partition_details": {
+                "title": "Configuration de la partition",
+                "description": "Configurez les détails de la partition (nom, taille, type de système de fichiers).",
+                "data": {
+                    "name": "Nom de la partition",
+                    "size": "Taille (ex: 50G ou 50% ou 100%)",
+                    "fstype": "Type de système de fichiers"
+                }
+            },
+            "confirm_partition_creation": {
+                "title": "Confirmer la création des partitions",
+                "description": "⚠️ ATTENTION: Cette opération effacera toutes les données du disque! Vérifiez la configuration et confirmez pour continuer.",
+                "data": {}
             }
         }
     }

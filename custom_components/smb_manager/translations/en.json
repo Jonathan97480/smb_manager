@@ -107,6 +107,27 @@
                 "title": "Restart Samba",
                 "description": "Click Submit to restart Samba services (smbd and nmbd).",
                 "data": {}
+            },
+            "create_partition": {
+                "title": "Create partitions",
+                "description": "The selected disk has no valid partition. How many partitions would you like to create?",
+                "data": {
+                    "num_partitions": "Number of partitions (1-4)"
+                }
+            },
+            "partition_details": {
+                "title": "Partition configuration",
+                "description": "Configure partition details (name, size, filesystem type).",
+                "data": {
+                    "name": "Partition name",
+                    "size": "Size (e.g. 50G or 50% or 100%)",
+                    "fstype": "Filesystem type"
+                }
+            },
+            "confirm_partition_creation": {
+                "title": "Confirm partition creation",
+                "description": "⚠️ WARNING: This operation will erase all data on the disk! Review the configuration and confirm to continue.",
+                "data": {}
             }
         }
     }

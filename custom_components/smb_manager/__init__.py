@@ -90,6 +90,12 @@ async def async_setup(hass, config):
         _LOGGER.info("Service install_dependencies called")
         await hass.async_add_executor_job(disk_manager.install_dependencies)
     
+    async def handle_create_partitions(call):
+        _LOGGER.info("Service create_partitions called")
+        device = call.data.get("device")
+        partitions = call.data.get("partitions", [])
+        await hass.async_add_executor_job(disk_manager.create_partitions, device, partitions)
+    
     # Enregistrement de tous les services
     hass.services.async_register(DOMAIN, "detect_disks", handle_detect_disks)
     hass.services.async_register(DOMAIN, "mount_disk", handle_mount_disk)
@@ -101,6 +107,7 @@ async def async_setup(hass, config):
     hass.services.async_register(DOMAIN, "delete_user", handle_delete_user)
     hass.services.async_register(DOMAIN, "restart_samba", handle_restart_samba)
     hass.services.async_register(DOMAIN, "install_dependencies", handle_install_deps)
+    hass.services.async_register(DOMAIN, "create_partitions", handle_create_partitions)
     
     _LOGGER.info("SMB Share Manager setup complete")
     return True

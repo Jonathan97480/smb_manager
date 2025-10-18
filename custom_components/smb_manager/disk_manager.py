@@ -245,3 +245,91 @@ class DiskManager:
         except Exception as e:
             _LOGGER.error(f"Failed to install dependencies: {e}")
             return {"success": False, "error": str(e)}
+
+    def create_partitions(self, device: str, partitions: List[Dict]) -> Dict:
+        """Create partitions on a disk using parted.
+        
+        Args:
+            device: Device path (e.g., /dev/sda)
+            partitions: List of partition configs with 'name', 'size', 'fstype'
+        
+        Returns:
+            Dict with success status
+        """
+        try:
+            _LOGGER.info(f"Creating partitions on {device}")
+            
+            # First, unmount any existing partitions
+            try:
+                result = self._run_command(["lsblk", "-J", "-o", "NAME,MOUNTPOINT", device])
+                import json
+                data = json.loads(result.stdout)
+                for block in data.get("blockdevices", []):
+                    if block.get("mountpoint"):
+                        _LOGGER.info(f"Unmounting {block['mountpoint']}")
+                        self._run_command(["umount", block["mountpoint"]])
+            except Exception as e:
+                _LOGGER.warning(f"Could not unmount existing partitions: {e}")
+            
+            # Create new partition table (GPT)
+            _LOGGER.info(f"Creating GPT partition table on {device}")
+            self._run_command(["parted", "-s", device, "mklabel", "gpt"])
+            
+            # Create partitions
+            start = "0%"
+            for i, part_config in enumerate(partitions, 1):
+                size = part_config.get("size", "100%")
+                
+                # Calculate end position
+                if size.endswith("%"):
+                    if i == len(partitions):
+                        end = "100%"
+                    else:
+                        end = size
+                elif size.endswith("G"):
+                    # Convert GB to end position
+                    gb = float(size.rstrip("G"))
+                    end = f"{gb}GB"
+                else:
+                    end = size
+                
+                _LOGGER.info(f"Creating partition {i}: {start} to {end}")
+                self._run_command([
+                    "parted", "-s", device, "mkpart",
+                    f"primary", start, end
+                ])
+                
+                # Update start for next partition
+                start = end
+            
+            # Wait for kernel to recognize new partitions
+            import time
+            time.sleep(2)
+            self._run_command(["partprobe", device])
+            time.sleep(1)
+            
+            # Format partitions
+            for i, part_config in enumerate(partitions, 1):
+                partition_device = f"{device}{i}"
+                fstype = part_config.get("fstype", "ext4")
+                label = part_config.get("name", f"partition{i}")
+                
+                _LOGGER.info(f"Formatting {partition_device} as {fstype} with label {label}")
+                
+                if fstype == "ext4":
+                    self._run_command(["mkfs.ext4", "-F", "-L", label, partition_device])
+                elif fstype == "ntfs":
+                    self._run_command(["mkfs.ntfs", "-f", "-L", label, partition_device])
+                elif fstype == "vfat":
+                    self._run_command(["mkfs.vfat", "-n", label, partition_device])
+                elif fstype == "exfat":
+                    self._run_command(["mkfs.exfat", "-n", label, partition_device])
+                else:
+                    _LOGGER.warning(f"Unknown filesystem type: {fstype}")
+            
+            _LOGGER.info(f"Successfully created {len(partitions)} partition(s) on {device}")
+            return {"success": True, "partitions": len(partitions)}
+            
+        except Exception as e:
+            _LOGGER.error(f"Failed to create partitions on {device}: {e}")
+            return {"success": False, "error": str(e)}
